@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FloorSense AI — Structural Analysis Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        /* ═══════════════════════════════════════════════════
+           DESIGN TOKENS
+        ═══════════════════════════════════════════════════ */
+        :root {
+            --bg:          #07090f;
+            --bg-2:        #0d1421;
+            --bg-3:        #111c2e;
+            --bg-4:        #162030;
+            --border:      rgba(60, 110, 190, 0.18);
+            --border-hi:   rgba(60, 110, 190, 0.4);
+
+            --accent:      #3b9eff;
+            --accent-glow: rgba(59, 158, 255, 0.22);
+            --accent-hi:   #6fb8ff;
+
+            --red:         #ff3d55;
+            --red-bg:      rgba(255, 61, 85,  0.12);
+            --amber:       #fbbf24;
+            --amber-bg:    rgba(251,191, 36,  0.12);
+            --blue:        #60a5fa;
+            --blue-bg:     rgba(96, 165, 250, 0.12);
+            --green:       #34d399;
+            --green-bg:    rgba(52, 211, 153, 0.12);
+
+            --text:        #dde8ff;
+            --text-mid:    #8ba3c4;
+            --text-dim:    #445875;
+
+            --grid-line:   rgba(59, 130, 246, 0.055);
+            --shadow:      0 8px 32px rgba(0,0,0,0.55);
+            --shadow-lg:   0 20px 60px rgba(0,0,0,0.7);
+
+            --ff-head: 'Syne', sans-serif;
+            --ff-body: 'DM Sans', sans-serif;
+            --ff-mono: 'JetBrains Mono', monospace;
+
+            --r:  8px;
+            --r2: 12px;
+            --r3: 18px;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           RESET / BASE
+        ═══════════════════════════════════════════════════ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            height: 100%; width: 100%;
+            overflow: hidden;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--ff-body);
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Blueprint grid texture */
+        .grid-bg {
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           UPLOAD STATE
+        ═══════════════════════════════════════════════════ */
+        #upload-state {
+            position: fixed; inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            z-index: 200;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        #upload-state.fade-out {
+            opacity: 0; transform: scale(0.97);
+            pointer-events: none;
+        }
+
+        .upload-bg {
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 42px 42px;
+        }
+        .upload-bg::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse 70% 60% at 50% 50%,
+                rgba(59,158,255,0.06) 0%, transparent 70%);
+        }
+
+        .upload-card {
+            position: relative; z-index: 1;
+            width: 520px;
+            background: var(--bg-3);
+            border: 1px solid var(--border-hi);
+            border-radius: var(--r3);
+            padding: 48px 44px 44px;
+            box-shadow: var(--shadow-lg),
+                        0 0 0 1px rgba(59,158,255,0.08) inset,
+                        0 0 80px rgba(59,158,255,0.08);
+            animation: cardIn 0.6s cubic-bezier(0.22,1,0.36,1) both;
+        }
+
+        @keyframes cardIn {
+            from { opacity:0; transform: translateY(24px); }
+            to   { opacity:1; transform: translateY(0); }
+        }
+
+        .brand-row {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 32px;
+        }
+        .brand-icon {
+            width: 36px; height: 36px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+        .brand-icon svg { width:20px; height:20px; fill: #fff; }
+        .brand-name {
+            font-family: var(--ff-head);
+            font-size: 1.15rem;
+            letter-spacing: 0.03em;
+            color: var(--text);
+        }
+        .brand-name span { color: var(--accent); }
+
+        .upload-card h1 {
+            font-family: var(--ff-head);
+            font-size: 2rem;
+            line-height: 1.15;
+            margin-bottom: 10px;
+            color: var(--text);
+        }
+        .upload-card p {
+            color: var(--text-mid);
+            margin-bottom: 32px;
+            font-size: 0.95rem;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border-hi);
+            border-radius: var(--r2);
+            padding: 36px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            background: rgba(59,158,255,0.03);
+            position: relative;
+            overflow: hidden;
+        }
+        .drop-zone::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(circle at 50% 50%, var(--accent-glow) 0%, transparent 70%);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .drop-zone:hover::before,
+        .drop-zone.drag-over::before { opacity: 1; }
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(59,158,255,0.07);
+        }
+        .drop-zone.drag-over { transform: scale(1.01); }
+
+        .drop-icon {
+            width: 52px; height: 52px;
+            margin: 0 auto 16px;
+            background: var(--bg-4);
+            border: 1px solid var(--border-hi);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .drop-icon svg { width:24px; height:24px; stroke: var(--accent); fill:none; stroke-width:1.8; }
+
+        .drop-zone h3 { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+        .drop-zone p  { font-size: 0.85rem; color: var(--text-mid); margin-bottom: 20px; }
+
+        .btn-upload {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--r);
+            padding: 10px 22px;
+            font-family: var(--ff-body);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 20px rgba(59,158,255,0.3);
+        }
+        .btn-upload:hover { background: var(--accent-hi); transform: translateY(-1px); box-shadow: 0 4px 24px rgba(59,158,255,0.4); }
+
+        .upload-hint {
+            display: flex; gap: 24px;
+            margin-top: 28px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+        .hint-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-dim); }
+        .hint-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+        #file-input { display: none; }
+
+        /* ═══════════════════════════════════════════════════
+           LOADING STATE
+        ═══════════════════════════════════════════════════ */
+        #loading-state {
+            position: fixed; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--bg);
+            z-index: 190;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #loading-state.visible { opacity: 1; pointer-events: auto; }
+        #loading-state.fade-out { opacity: 0; pointer-events: none; }
+
+        .loading-card {
+            width: 380px;
+            background: var(--bg-3);
+            border: 1px solid var(--border-hi);
+            border-radius: var(--r3);
+            padding: 40px 36px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .spinner-ring {
+            width: 60px; height: 60px;
+            border: 3px solid rgba(59,158,255,0.15);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+            margin: 0 auto 24px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-card h3 {
+            font-family: var(--ff-head);
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+        }
+        #loading-step {
+            font-size: 0.85rem; color: var(--text-mid);
+            font-family: var(--ff-mono);
+            min-height: 1.4em;
+            transition: opacity 0.3s;
+        }
+
+        .progress-steps {
+            margin-top: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            text-align: left;
+        }
+        .progress-item {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 0.82rem; color: var(--text-dim);
+            transition: color 0.3s;
+        }
+        .progress-item.done { color: var(--green); }
+        .progress-item.active { color: var(--text); }
+        .progress-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--text-dim); flex-shrink: 0;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .progress-item.done .progress-dot { background: var(--green); }
+        .progress-item.active .progress-dot {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            animation: pulse-dot 1s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%,100% { opacity:1; } 50% { opacity: 0.4; }
+        }
+
+        /* ═══════════════════════════════════════════════════
+           DASHBOARD STATE
+        ═══════════════════════════════════════════════════ */
+        #dashboard-state {
+            position: fixed; inset: 0;
+            display: flex; flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        #dashboard-state.visible { opacity: 1; pointer-events: auto; }
+
+        /* Header */
+        .dash-header {
+            height: 52px;
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center;
+            padding: 0 20px;
+            gap: 16px;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .dash-brand {
+            display: flex; align-items: center; gap: 8px;
+            font-family: var(--ff-head);
+            font-size: 0.95rem;
+            letter-spacing: 0.04em;
+            color: var(--text);
+            flex-shrink: 0;
+        }
+        .dash-brand-dot { width:8px; height:8px; background:var(--accent); border-radius:2px; }
+        .dash-brand span { color: var(--accent); }
+
+        .header-divider { width:1px; height:24px; background: var(--border); }
+
+        .header-file {
+            display: flex; align-items: center; gap: 8px;
+            font-family: var(--ff-mono);
+            font-size: 0.78rem;
+            color: var(--text-mid);
+            flex: 1;
+        }
+        .header-file-name { color: var(--text); }
+
+        .header-badge {
+            display: flex; align-items: center; gap: 6px;
+            background: var(--green-bg);
+            border: 1px solid rgba(52,211,153,0.25);
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 0.76rem;
+            font-family: var(--ff-mono);
+            color: var(--green);
+        }
+        .header-badge-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation: pulse-dot 1.5s ease-in-out infinite; }
+
+        .btn-new {
+            display: flex; align-items: center; gap: 6px;
+            background: var(--bg-4);
+            border: 1px solid var(--border-hi);
+            color: var(--text);
+            border-radius: var(--r);
+            padding: 6px 14px;
+            font-family: var(--ff-body);
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-new:hover { background: var(--bg-3); border-color: var(--accent); color: var(--accent-hi); }
+
+        /* Dashboard body grid */
+        .dash-body {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 268px 1fr 336px;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* ─── LEFT PANEL ─────────────────────────────────── */
+        .left-panel {
+            background: var(--bg-2);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            gap: 12px;
+            padding: 14px;
+            overflow-y: auto;
+        }
+
+        .panel-label {
+            font-family: var(--ff-mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            padding: 0 2px 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .img-card {
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .img-card-header {
+            padding: 9px 12px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+        .img-card-title { font-size: 0.78rem; font-weight: 600; color: var(--text-mid); letter-spacing: 0.03em; }
+        .img-card-tag {
+            font-family: var(--ff-mono);
+            font-size: 0.68rem;
+            color: var(--accent);
+            background: var(--accent-glow);
+            padding: 2px 7px; border-radius: 4px;
+        }
+
+        #processed-img-wrap {
+            background: #000;
+            display: flex; align-items: center; justify-content: center;
+            min-height: 120px;
+        }
+        #processed-img-wrap img {
+            width: 100%; height: auto;
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        /* Legend */
+        .legend-card {
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            padding: 12px 14px;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .legend-item {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 0.82rem;
+        }
+        .legend-swatch {
+            width: 28px; height: 5px; border-radius: 3px; flex-shrink: 0;
+        }
+        .legend-label { color: var(--text-mid); }
+        .legend-count {
+            margin-left: auto;
+            font-family: var(--ff-mono);
+            font-size: 0.76rem;
+            color: var(--text-dim);
+        }
+
+        /* Stats mini grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .stat-box {
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 12px 10px;
+            text-align: center;
+        }
+        .stat-val {
+            display: block;
+            font-family: var(--ff-mono);
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: var(--accent);
+            line-height: 1.2;
+        }
+        .stat-lbl {
+            display: block;
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        /* ─── CENTER PANEL ───────────────────────────────── */
+        .center-panel {
+            position: relative;
+            background: #07090f;
+            overflow: hidden;
+        }
+
+        /* Subtle grid overlay for 3D viewport */
+        .center-panel::before {
+            content: '';
+            position: absolute; inset: 0; z-index: 1;
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+
+        #threejs-container {
+            position: absolute; inset: 0; z-index: 2;
+        }
+        #threejs-container canvas { display: block; }
+
+        /* Corner overlay labels */
+        .viewport-label {
+            position: absolute; z-index: 10;
+            font-family: var(--ff-mono);
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            pointer-events: none;
+        }
+        .vl-tl { top: 14px; left: 16px; }
+        .vl-tr { top: 14px; right: 16px; text-align: right; }
+        .vl-bl { bottom: 14px; left: 16px; }
+
+        .controls-hint {
+            display: flex; gap: 14px; align-items: center;
+        }
+        .ctrl-item { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: var(--text-dim); }
+        .ctrl-key {
+            background: var(--bg-4);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-size: 0.68rem;
+        }
+
+        /* ─── RIGHT PANEL ────────────────────────────────── */
+        .right-panel {
+            background: var(--bg-2);
+            border-left: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .panel-section-title {
+            font-size: 0.72rem;
+            font-family: var(--ff-mono);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+
+        .metrics-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .metric-tile {
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 12px;
+        }
+        .metric-tile .m-val {
+            font-family: var(--ff-mono);
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--accent);
+            display: block;
+        }
+        .metric-tile .m-lbl {
+            font-size: 0.73rem;
+            color: var(--text-mid);
+            display: block;
+            margin-top: 2px;
+        }
+
+        .analysis-box {
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: var(--r);
+            padding: 14px;
+            font-size: 0.83rem;
+            line-height: 1.65;
+            color: var(--text-mid);
+        }
+        .analysis-box strong { color: var(--text); }
+        .analysis-box .alert { color: var(--red); font-weight: 600; }
+        .analysis-box .ok    { color: var(--green); font-weight: 600; }
+
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 0;
+        }
+
+        .rec-header {
+            font-family: var(--ff-mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+        .rec-card {
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            transition: border-color 0.2s;
+        }
+        .rec-card:hover { border-color: var(--border-hi); }
+        .rec-card-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .rec-name {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .rec-score {
+            font-family: var(--ff-mono);
+            font-size: 0.72rem;
+            background: var(--green-bg);
+            border: 1px solid rgba(52,211,153,0.25);
+            color: var(--green);
+            padding: 2px 7px;
+            border-radius: 4px;
+        }
+        .rec-card p {
+            font-size: 0.79rem;
+            color: var(--text-mid);
+            line-height: 1.55;
+        }
+        .rec-card p strong { color: var(--text-mid); }
+
+        /* scrollbar styling */
+        .left-panel::-webkit-scrollbar,
+        .right-panel::-webkit-scrollbar { width: 4px; }
+        .left-panel::-webkit-scrollbar-track,
+        .right-panel::-webkit-scrollbar-track { background: transparent; }
+        .left-panel::-webkit-scrollbar-thumb,
+        .right-panel::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 4px; }
+
+        /* Error toast */
+        #error-toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: #1e0a0d;
+            border: 1px solid rgba(255,61,85,0.4);
+            color: var(--red);
+            padding: 12px 22px;
+            border-radius: var(--r2);
+            font-size: 0.85rem;
+            z-index: 999;
+            display: none;
+            box-shadow: var(--shadow);
+            max-width: 420px;
+            text-align: center;
+        }
+        #error-toast.show { display: block; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(12px); } }
+    </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     UPLOAD STATE
+════════════════════════════════════════════════════════════ -->
+<div id="upload-state">
+    <div class="upload-bg"></div>
+
+    <div class="upload-card">
+        <div class="brand-row">
+            <div class="brand-icon">
+                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div class="brand-name">Floor<span>Sense</span> AI</div>
+        </div>
+
+        <h1>Structural Intelligence<br>From Floor Plans</h1>
+        <p>Upload any 2D floor plan image. Our CV pipeline extracts walls, classifies load-bearing structure, and renders an interactive 3D model — in seconds.</p>
+
+        <div class="drop-zone" id="drop-zone">
+            <div class="drop-icon">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+                    <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/>
+                </svg>
+            </div>
+            <h3>Drop your floor plan here</h3>
+            <p>PNG, JPG or GIF — high contrast floor plans work best</p>
+            <button class="btn-upload" id="btn-upload-trigger">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Choose File
+            </button>
+        </div>
+
+        <div class="upload-hint">
+            <div class="hint-item">
+                <div class="hint-dot" style="background:var(--red)"></div>
+                Load-bearing walls
+            </div>
+            <div class="hint-item">
+                <div class="hint-dot" style="background:var(--amber)"></div>
+                Partition walls
+            </div>
+            <div class="hint-item">
+                <div class="hint-dot" style="background:var(--blue)"></div>
+                Window openings
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="file-input" accept="image/png,image/jpeg,image/gif">
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     LOADING STATE
+════════════════════════════════════════════════════════════ -->
+<div id="loading-state">
+    <div class="loading-card">
+        <div class="spinner-ring"></div>
+        <h3>Analyzing Structure</h3>
+        <div id="loading-step">Initializing pipeline...</div>
+
+        <div class="progress-steps" id="progress-steps">
+            <div class="progress-item" data-step="0">
+                <div class="progress-dot"></div>
+                Uploading image
+            </div>
+            <div class="progress-item" data-step="1">
+                <div class="progress-dot"></div>
+                Thresholding &amp; preprocessing
+            </div>
+            <div class="progress-item" data-step="2">
+                <div class="progress-dot"></div>
+                Skeletonizing wall geometry
+            </div>
+            <div class="progress-item" data-step="3">
+                <div class="progress-dot"></div>
+                Classifying load-bearing structure
+            </div>
+            <div class="progress-item" data-step="4">
+                <div class="progress-dot"></div>
+                Detecting window openings
+            </div>
+            <div class="progress-item" data-step="5">
+                <div class="progress-dot"></div>
+                Generating 3D model
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     DASHBOARD STATE
+════════════════════════════════════════════════════════════ -->
+<div id="dashboard-state">
+
+    <!-- Header -->
+    <header class="dash-header">
+        <div class="dash-brand">
+            <div class="dash-brand-dot"></div>
+            Floor<span>Sense</span> AI
+        </div>
+        <div class="header-divider"></div>
+        <div class="header-file">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+            <span class="header-file-name" id="hdr-filename">—</span>
+        </div>
+        <div class="header-badge">
+            <div class="header-badge-dot"></div>
+            Analysis Complete
+        </div>
+        <button class="btn-new" id="btn-new-analysis">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Analysis
+        </button>
+    </header>
+
+    <!-- Body -->
+    <div class="dash-body">
+
+        <!-- LEFT: 2D image + legend + stats -->
+        <aside class="left-panel">
+            <div class="panel-label">⬡ Topology Map</div>
+
+            <div class="img-card">
+                <div class="img-card-header">
+                    <span class="img-card-title">Annotated Floor Plan</span>
+                    <span class="img-card-tag">2D · CV</span>
+                </div>
+                <div id="processed-img-wrap">
+                    <img id="processed-img" src="" alt="Processed floor plan">
+                </div>
+            </div>
+
+            <div class="legend-card">
+                <div class="legend-item">
+                    <div class="legend-swatch" style="background:var(--red)"></div>
+                    <span class="legend-label">Load-Bearing Walls</span>
+                    <span class="legend-count" id="leg-lb">0</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-swatch" style="background:var(--amber)"></div>
+                    <span class="legend-label">Partition Walls</span>
+                    <span class="legend-count" id="leg-pw">0</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-swatch" style="background:var(--blue)"></div>
+                    <span class="legend-label">Window Openings</span>
+                    <span class="legend-count" id="leg-wn">0</span>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-val" id="stat-lb">—</span>
+                    <span class="stat-lbl">Load-Bearing (m)</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-val" id="stat-pw">—</span>
+                    <span class="stat-lbl">Partition (m)</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CENTER: Three.js 3D Viewer -->
+        <main class="center-panel">
+            <div class="viewport-label vl-tl">INTERACTIVE 3D · THREE.JS</div>
+            <div class="viewport-label vl-tr" id="vl-wall-count"></div>
+            <div class="viewport-label vl-bl">
+                <div class="controls-hint">
+                    <div class="ctrl-item"><span class="ctrl-key">L-Drag</span> Orbit</div>
+                    <div class="ctrl-item"><span class="ctrl-key">R-Drag</span> Pan</div>
+                    <div class="ctrl-item"><span class="ctrl-key">Scroll</span> Zoom</div>
+                </div>
+            </div>
+            <div id="threejs-container"></div>
+        </main>
+
+        <!-- RIGHT: Insights Panel -->
+        <aside class="right-panel">
+            <div class="panel-label">⬡ Structural Insights</div>
+
+            <div>
+                <div class="panel-section-title">Wall Length Summary</div>
+                <div class="metrics-row">
+                    <div class="metric-tile">
+                        <span class="m-val" id="ins-lb">—</span>
+                        <span class="m-lbl">Load-Bearing (m)</span>
+                    </div>
+                    <div class="metric-tile">
+                        <span class="m-val" id="ins-pw">—</span>
+                        <span class="m-lbl">Partition (m)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="panel-section-title">AI Structural Summary</div>
+                <div class="analysis-box" id="analysis-box">Analyzing…</div>
+            </div>
+
+            <hr class="section-divider">
+
+            <div>
+                <div class="rec-header">▸ Top Load-Bearing Materials</div>
+                <div class="rec-card">
+                    <div class="rec-card-header">
+                        <span class="rec-name">RCC (Reinforced Concrete)</span>
+                        <span class="rec-score">69.5</span>
+                    </div>
+                    <p><strong>Why:</strong> The gold standard. High cost (90), but unbeatable structural strength (95). Perfect for foundation-to-roof loads.</p>
+                </div>
+                <div class="rec-card">
+                    <div class="rec-card-header">
+                        <span class="rec-name">Solid Concrete Blocks</span>
+                        <span class="rec-score">68.0</span>
+                    </div>
+                    <p><strong>Why:</strong> Balanced tradeoff. Cheaper (60) than poured concrete, maintaining adequate strength (80).</p>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+
+            <div>
+                <div class="rec-header">▸ Top Partition Materials</div>
+                <div class="rec-card">
+                    <div class="rec-card-header">
+                        <span class="rec-name">Drywall (Gypsum Board)</span>
+                        <span class="rec-score">62.0</span>
+                    </div>
+                    <p><strong>Why:</strong> Lowest cost (20) and fastest installation. Strength is irrelevant for non-structural dividers.</p>
+                </div>
+                <div class="rec-card">
+                    <div class="rec-card-header">
+                        <span class="rec-name">AAC Blocks</span>
+                        <span class="rec-score">54.0</span>
+                    </div>
+                    <p><strong>Why:</strong> Slightly higher cost (40) but offers superior soundproofing between rooms.</p>
+                </div>
+            </div>
+        </aside>
+
+    </div><!-- /.dash-body -->
+</div><!-- /#dashboard-state -->
+
+<div id="error-toast"></div>
+
+<!-- ════════════════════════════════════════════════════════════
+     THREE.JS + APP LOGIC
+════════════════════════════════════════════════════════════ -->
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOM REFERENCES
+// ─────────────────────────────────────────────────────────────────────────────
+const uploadState    = document.getElementById('upload-state');
+const loadingState   = document.getElementById('loading-state');
+const dashState      = document.getElementById('dashboard-state');
+const dropZone       = document.getElementById('drop-zone');
+const fileInput      = document.getElementById('file-input');
+const errorToast     = document.getElementById('error-toast');
+const progressItems  = document.querySelectorAll('.progress-item');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPLOAD + DRAG-DROP
+// ─────────────────────────────────────────────────────────────────────────────
+document.getElementById('btn-upload-trigger').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) submitFile(e.target.files[0]); });
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) submitFile(file);
+});
+
+document.getElementById('btn-new-analysis').addEventListener('click', () => location.reload());
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOADING STEP ANIMATOR
+// ─────────────────────────────────────────────────────────────────────────────
+let stepInterval = null;
+let currentStep  = 0;
+
+function startLoadingSteps() {
+    currentStep = 0;
+    progressItems.forEach(i => { i.className = 'progress-item'; });
+    const stepTimes = [0, 600, 1400, 2300, 3000, 3800]; // ms per step
+
+    stepTimes.forEach((delay, idx) => {
+        setTimeout(() => {
+            progressItems.forEach((item, i) => {
+                if      (i < idx)  item.className = 'progress-item done';
+                else if (i === idx) item.className = 'progress-item active';
+                else               item.className = 'progress-item';
+            });
+        }, delay);
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILE UPLOAD → API
+// ─────────────────────────────────────────────────────────────────────────────
+async function submitFile(file) {
+    // Transition: upload → loading
+    uploadState.classList.add('fade-out');
+    setTimeout(() => {
+        uploadState.style.display = 'none';
+        loadingState.classList.add('visible');
+        startLoadingSteps();
+    }, 380);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            showError(data.error || 'Server error. Is app.py running?');
+            loadingState.classList.remove('visible');
+            uploadState.style.display = '';
+            uploadState.classList.remove('fade-out');
+            return;
+        }
+
+        // Mark all steps done before transitioning
+        progressItems.forEach(i => i.className = 'progress-item done');
+
+        setTimeout(() => showDashboard(file.name, data), 700);
+
+    } catch (err) {
+        showError('Cannot reach the backend. Make sure Flask is running on port 5000.');
+        loadingState.classList.remove('visible');
+        uploadState.style.display = '';
+        uploadState.classList.remove('fade-out');
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHOW DASHBOARD
+// ─────────────────────────────────────────────────────────────────────────────
+function showDashboard(filename, data) {
+    loadingState.classList.add('fade-out');
+
+    setTimeout(() => {
+        loadingState.style.display = 'none';
+        dashState.classList.add('visible');
+
+        // Populate header
+        document.getElementById('hdr-filename').textContent = filename;
+
+        // Populate processed image
+        document.getElementById('processed-img').src = data.processed_image_url;
+
+        // Populate legend counts
+        const lb = data.wall_data.load_bearing_walls.length;
+        const pw = data.wall_data.partition_walls.length;
+        const wn = data.wall_data.windows.length;
+        document.getElementById('leg-lb').textContent = lb + ' segs';
+        document.getElementById('leg-pw').textContent = pw + ' segs';
+        document.getElementById('leg-wn').textContent = wn;
+
+        // Populate viewport overlay
+        document.getElementById('vl-wall-count').textContent =
+            `LB: ${lb}  ·  PART: ${pw}  ·  WIN: ${wn}`;
+
+        // Compute lengths and update UI panels
+        updateInsightsPanel(data.wall_data);
+
+        // Init Three.js
+        initThreeJS(data.wall_data);
+
+    }, 300);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INSIGHTS PANEL LOGIC (preserved from original)
+// ─────────────────────────────────────────────────────────────────────────────
+const PIXELS_TO_METERS = 0.05;
+
+function updateInsightsPanel(wallData) {
+    let loadBearingLength = 0, partitionLength = 0, maxSpan = 0;
+
+    (wallData.load_bearing_walls || []).forEach(w => {
+        const lenM = Math.hypot(w.x2 - w.x1, w.y2 - w.y1) * PIXELS_TO_METERS;
+        loadBearingLength += lenM;
+        if (lenM > maxSpan) maxSpan = lenM;
+    });
+    (wallData.partition_walls || []).forEach(w => {
+        partitionLength += Math.hypot(w.x2 - w.x1, w.y2 - w.y1) * PIXELS_TO_METERS;
+    });
+
+    const lbStr = loadBearingLength.toFixed(1);
+    const pwStr = partitionLength.toFixed(1);
+
+    // Update all metric displays
+    ['ins-lb', 'stat-lb'].forEach(id => document.getElementById(id).textContent = lbStr + ' m');
+    ['ins-pw', 'stat-pw'].forEach(id => document.getElementById(id).textContent = pwStr + ' m');
+
+    // Analysis box (LLM-style summary from original)
+    let html = `<p>Based on topological extraction, this floor plan contains
+        <strong>${lbStr} m</strong> of load-bearing structural walls and
+        <strong>${pwStr} m</strong> of non-structural partition walls.</p>
+        <p style="margin-top:10px"><strong>Tradeoff Analysis:</strong> For the primary structure, we compute a weighted
+        score rewarding compressive strength over cost. For interior partitions, the algorithm flips the
+        weights, prioritising fast, low-cost installation.</p>`;
+
+    if (maxSpan > 8.0) {
+        html += `<p style="margin-top:10px" class="alert">⚠ Structural Concern: A continuous span of ${maxSpan.toFixed(1)} m detected.
+            Spans over 8 m typically require intermediate column supports or Steel I-Beams to prevent sagging.</p>`;
+    } else {
+        html += `<p style="margin-top:10px" class="ok">✓ Span Check: All load-bearing spans within standard residential limits
+            (max span ${maxSpan.toFixed(1)} m).</p>`;
+    }
+
+    document.getElementById('analysis-box').innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THREE.JS — SCENE SETUP & WALL BUILDER (original logic, adapted for container)
+// ─────────────────────────────────────────────────────────────────────────────
+function initThreeJS(wallData) {
+    const container = document.getElementById('threejs-container');
+
+    // Scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x07090f);
+    scene.fog = new THREE.Fog(0x07090f, 200, 2000);
+
+    // Camera
+    const camera = new THREE.PerspectiveCamera(
+        60,
+        container.clientWidth / container.clientHeight,
+        0.1, 5000
+    );
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    // Orbit controls bound to container (not window)
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Resize observer — keeps 3D view filling its panel
+    const ro = new ResizeObserver(() => {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        renderer.setSize(w, h);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+    });
+    ro.observe(container);
+
+    // Lighting
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    dirLight.position.set(200, 300, 200);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    // Subtle blue-tinted fill light
+    const fillLight = new THREE.DirectionalLight(0x3b9eff, 0.25);
+    fillLight.position.set(-100, 100, -100);
+    scene.add(fillLight);
+
+    // Floor
+    const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(3000, 3000),
+        new THREE.MeshStandardMaterial({ color: 0x0e1624, depthWrite: false })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Grid helper
+    const grid = new THREE.GridHelper(600, 30, 0x1a2a3a, 0x0f1e2a);
+    grid.position.y = 0.1;
+    scene.add(grid);
+
+    // Materials
+    const glassMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0x60a5fa, metalness: 0.1, roughness: 0.05,
+        transmission: 0.9, transparent: true, opacity: 0.55
+    });
+
+    // ─── WALL HELPERS (original logic, unchanged) ─────────────────────────────
+    function getProjectionOnSegment(px, py, x1, y1, x2, y2) {
+        const l2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+        if (l2 === 0) return { dist: Math.hypot(px - x1, py - y1), t: 0 };
+        let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        const projX = x1 + t * (x2 - x1);
+        const projY = y1 + t * (y2 - y1);
+        return { dist: Math.hypot(px - projX, py - projY), t };
+    }
+
+    function createWall(x1, y1, x2, y2, colorHex, thickness, allWindows) {
+        const height = 45;
+        const length = Math.hypot(x2 - x1, y2 - y1);
+        if (length < 15) return;
+
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const wallGroup = new THREE.Group();
+        const glassGroup = new THREE.Group();
+        wallGroup.add(glassGroup);
+
+        const wallShape = new THREE.Shape();
+        wallShape.moveTo(0, 0);
+        wallShape.lineTo(length, 0);
+        wallShape.lineTo(length, height);
+        wallShape.lineTo(0, height);
+        wallShape.lineTo(0, 0);
+
+        const sillHeight   = 12;
+        const windowHeight = 22;
+
+        allWindows.forEach(win => {
+            const wx = win.x + win.w / 2;
+            const wy = win.y + win.h / 2;
+            const winSpan = Math.max(win.w, win.h);
+            const proj = getProjectionOnSegment(wx, wy, x1, y1, x2, y2);
+
+            if (proj.dist < 15 && proj.t > 0.05 && proj.t < 0.95) {
+                const holeCenter = proj.t * length;
+                const holeStart  = holeCenter - winSpan / 2;
+                const holeEnd    = holeCenter + winSpan / 2;
+
+                const holePath = new THREE.Path();
+                holePath.moveTo(holeStart, sillHeight);
+                holePath.lineTo(holeEnd, sillHeight);
+                holePath.lineTo(holeEnd, sillHeight + windowHeight);
+                holePath.lineTo(holeStart, sillHeight + windowHeight);
+                holePath.lineTo(holeStart, sillHeight);
+                wallShape.holes.push(holePath);
+
+                const glass = new THREE.Mesh(
+                    new THREE.BoxGeometry(winSpan, windowHeight, thickness - 1),
+                    glassMaterial
+                );
+                glass.position.set(holeCenter, sillHeight + windowHeight / 2, 0);
+                glassGroup.add(glass);
+            }
+        });
+
+        const extrudeSettings = { depth: thickness, bevelEnabled: false };
+        const geometry = new THREE.ExtrudeGeometry(wallShape, extrudeSettings);
+        geometry.translate(0, 0, -thickness / 2);
+
+        const wall = new THREE.Mesh(
+            geometry,
+            new THREE.MeshStandardMaterial({ color: colorHex, side: THREE.DoubleSide })
+        );
+        wall.castShadow = true;
+        wall.receiveShadow = true;
+
+        wallGroup.add(wall);
+        wallGroup.position.set(x1, 0, y1);
+        wallGroup.rotation.y = -angle;
+        scene.add(wallGroup);
+    }
+
+    // ─── RENDER DATA ─────────────────────────────────────────────────────────
+    const windows = wallData.windows || [];
+
+    (wallData.load_bearing_walls || []).forEach(w => {
+        createWall(w.x1, w.y1, w.x2, w.y2, 0xff3d55, 8, windows);  // red
+    });
+    (wallData.partition_walls || []).forEach(w => {
+        createWall(w.x1, w.y1, w.x2, w.y2, 0xfbbf24, 4, windows);  // amber
+    });
+
+    // ─── CAMERA POSITION ─────────────────────────────────────────────────────
+    const allWalls = [...(wallData.load_bearing_walls || []), ...(wallData.partition_walls || [])];
+    if (allWalls.length > 0) {
+        const sw = allWalls[0];
+        camera.position.set(sw.x1 + 250, 500, sw.y1 + 380);
+        controls.target.set(sw.x1 + 60, 0, sw.y1 + 60);
+        controls.update();
+    } else {
+        camera.position.set(200, 400, 300);
+    }
+
+    // ─── ANIMATION LOOP ───────────────────────────────────────────────────────
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ERROR TOAST
+// ─────────────────────────────────────────────────────────────────────────────
+function showError(msg) {
+    errorToast.textContent = '⚠ ' + msg;
+    errorToast.classList.add('show');
+    setTimeout(() => errorToast.classList.remove('show'), 6000);
+}
+
+</script>
+</body>
+</html>
