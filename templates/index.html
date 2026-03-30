@@ -941,7 +941,21 @@ const progressItems  = document.querySelectorAll('.progress-item');
 // ─────────────────────────────────────────────────────────────────────────────
 // UPLOAD + DRAG-DROP
 // ─────────────────────────────────────────────────────────────────────────────
-document.getElementById('btn-upload-trigger').addEventListener('click', () => fileInput.click());
+const btn = document.getElementById('btn-upload-trigger');
+const input = document.getElementById('file-input');
+dropZone.addEventListener('click', () => fileInput.click());
+btn.addEventListener('click', () => {
+    input.value = null;   // reset previous file
+    input.click();
+});
+
+input.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    console.log("File selected:", file.name); // debug
+    submitFile(file);
+});
 fileInput.addEventListener('change', e => { if (e.target.files[0]) submitFile(e.target.files[0]); });
 
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });

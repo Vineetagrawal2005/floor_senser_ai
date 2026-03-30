@@ -23,7 +23,7 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 @app.route('/')
 def index():
     """Serve the main frontend page."""
-    return send_file('index.html')
+    return send_file('templates/index.html')
 
 
 @app.route('/outputs/<path:filename>')
